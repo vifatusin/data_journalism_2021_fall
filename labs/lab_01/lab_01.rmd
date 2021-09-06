@@ -1,6 +1,6 @@
 ---
 title: "lab_01"
-author: "sean mussenden"
+author: "victoria ifatusin"
 date: "8/19/2021"
 output: html_document
 ---
