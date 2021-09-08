@@ -63,7 +63,7 @@ west_virginia_ppp %>%
 
 ```{r}
 # Write the code to produce your answer here
-# Like so: filter - group_by - summarise - arrange. In regards to the question: filter - "undisbursed amounts greater than 0." Meaning filter(undisbursed_amount > 0). Group_by (what I wanna see) - "which servicing lenders" Meaning: group_by(servicing_lender_name). Summarise (does counting, total of things, also creates a new column) - " Meaning: summarise (total = n()) Arrange - "the most loans," meaning - arrange(desc(amount)). 
+# Like so: filter - group_by - summarise - arrange. In regards to the question: filter - "undisbursed amounts greater than 0." Meaning filter(undisbursed_amount > 0). Group_by (what I wanna see) - "which servicing lenders" Meaning: group_by(servicing_lender_name). Summarise (does counting, total of things, also creates a new column) - counts the number of rows " Meaning: summarise (total = n()) Arrange - "the most loans," meaning - arrange(desc(amount)). 
 
 west_virginia_ppp %>% 
   filter(undisbursed_amount > 0) %>% 
