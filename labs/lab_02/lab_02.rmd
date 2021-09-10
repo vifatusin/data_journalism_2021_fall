@@ -51,15 +51,31 @@ west_virginia_ppp <- read_rds("lab_02.rds")
 
 ```{r}
 # Write the code to produce your answer here
-# This is mutating
+# Like so: filter - mutate - group_by - summarise - arrange. Our question asks for one column from the data, "amount." Hence,  
 
-west_virginia_ppp %>% 
+
+wv_ppp_loan_amount_categories <- west_virginia_ppp %>%
+  select(amount) %>% 
+  mutate(case_when(amount < 10000 ~ "under_10k", 
+                   amount >= 10000 & 50000 ~ "10k_50k",
+                   amount >= 50000 & 100000 ~ "50k_100k",
+                   amount >= 100000 & 500000 ~ "100k_500k", 
+                   amount >= 500000 & 1000000 ~ "500k_1m",
+                   amount >= 1000000 ~ "1m_plus")) %>% 
+  mutate(under_10k = amount < 10000) %>% 
+  mutate(between_10k_50k = amount >= 10000 & 50000) %>% 
+  mutate(btw_50k_100k = amount >= 50000 & 100000) %>% 
+  mutate(btw_100k_500k = amount >= 100000 & 500000) %>% 
+  mutate(btw_500k_1m = amount >= 500000 & 1000000) %>% 
+  mutate(more_than_1m = amount >= 1000000) %>%
+  arrange(amount)
+  
   
 
 ```
 
 **Q2** Which servicing lenders have the most loans with undisbursed amounts greater than 0?
-**A2** 
+**A2** Harvest Small Business Finance, LLC has the most loans with undisbursed amounts greater than 0.
 
 ```{r}
 # Write the code to produce your answer here
@@ -73,12 +89,24 @@ west_virginia_ppp %>%
 ```
 
 **Q3** How would you describe the top 10 list of those lenders? What do they have in common or not? (You may want to look up some of the top ones.)
-**A3** [write your answer here]
+**A3** They are all lenders/banks.
 
 **Q4** Which month in 2021 had the most loans approved?
-**A4** [write your answer here]
+**A4** March
 
 ```{r}
 # Write the code to produce your answer here
+# Like so: filter - mutate - group_by - summarise - arrange. However, because we need to add another column and add new data - something that summarise can't do. That means mutating, "using the data you have to answer a new question" that can't be immediately answered because it isn't outright in the data. Hence,
+# From the question we are looking for the "month in 2021" with the "most loans approved." Colnames we are going to use from the data are "date_approved." We are looking for the number of loans (how many there are), not the amount of loans (how much they are together). This means we will need to add columns - summarise. 
+# The code: west_virginia_ppp %>% ---> the dataset we're using and the pipe.
+#           mutate(Month = floor_date(date_approved, "month")) ---> "mutate" to create column and make                changes, "Month" is the new colname we will assign it to, "floor_date" is what we use                   to assign the colname, and what will help us 'round down' our dates, "date_approved" is                 the colname and information we need to make it possible, ""month"" is the unit from the                 date that we a looking for. 
+#           group_by(Month) ---> "group_by" gives us the column and what we are grouping the new mutated               data with. "Month" is our new colname from the previous line of code. 
+#           summarise(total = n()) ---> "summarise" counts the rows/how many loans rather than how much.               "total" is an assigned colname that gives us that summary of how many, and the column                    name. "n()" is that number exactly that is assigned to the total. 
+#           arrange(desc(total)) ---> "arrange" simply arranges the data. Because we need the most,                   "desc" will arrange the data from greatest to least. "total" is the new colname that will                be arranged to give us the most loans for the month we are looking for.  
 
+west_virginia_ppp %>%
+  mutate(Month = floor_date(date_approved, "month")) %>% 
+  group_by(Month) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total))
 ```
