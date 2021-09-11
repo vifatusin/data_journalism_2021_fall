@@ -47,31 +47,23 @@ west_virginia_ppp <- read_rds("lab_02.rds")
 ## Answer questions
 
 **Q1** Create a new column that divides the loan amounts into multiple options: under_10k, 10k_50k, 50k_100k, 100k_500k, 500k_1m, 1m_plus. How many loans are in each group?
-**A1** [write your answer here]
+**A1** The amount of loans under 10,000 are 9,310, between 10,000 and 50,000 are 15,372, between 50,000 and 100,000 are 3,978, between 100,000 and 500,000 are 4,152, between 500,000 and 1,000,000 are 540, and more than 1,000,000 are 356. 
 
 ```{r}
 # Write the code to produce your answer here
 # Like so: filter - mutate - group_by - summarise - arrange. Our question asks for one column from the data, "amount." Hence,  
 
-
 wv_ppp_loan_amount_categories <- west_virginia_ppp %>%
-  select(amount) %>% 
-  mutate(case_when(amount < 10000 ~ "under_10k", 
-                   amount >= 10000 & 50000 ~ "10k_50k",
-                   amount >= 50000 & 100000 ~ "50k_100k",
-                   amount >= 100000 & 500000 ~ "100k_500k", 
-                   amount >= 500000 & 1000000 ~ "500k_1m",
-                   amount >= 1000000 ~ "1m_plus")) %>% 
-  mutate(under_10k = amount < 10000) %>% 
-  mutate(between_10k_50k = amount >= 10000 & 50000) %>% 
-  mutate(btw_50k_100k = amount >= 50000 & 100000) %>% 
-  mutate(btw_100k_500k = amount >= 100000 & 500000) %>% 
-  mutate(btw_500k_1m = amount >= 500000 & 1000000) %>% 
-  mutate(more_than_1m = amount >= 1000000) %>%
-  arrange(amount)
-  
-  
-
+  select(amount) %>%
+  mutate(label = case_when(
+    amount < 10000 ~ "under_10k", 
+    amount >= 10000 & amount < 50000 ~ "btw_10k_50k",
+    amount >= 50000 & amount < 100000 ~ "btw_50k_100k",
+    amount >= 100000 & amount < 500000 ~ "btw_100k_500k",
+    amount >= 500000 & amount < 1000000 ~ "btw_500k_1m",
+    amount >= 1000000 ~ "more_than_1m")) %>% 
+  group_by(label) %>% 
+  summarise(total = n()) 
 ```
 
 **Q2** Which servicing lenders have the most loans with undisbursed amounts greater than 0?
