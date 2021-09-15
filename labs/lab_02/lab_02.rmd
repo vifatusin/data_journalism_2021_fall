@@ -51,7 +51,8 @@ west_virginia_ppp <- read_rds("lab_02.rds")
 
 ```{r}
 # Write the code to produce your answer here
-# Like so: filter - mutate - group_by - summarise - arrange. Our question asks for one column from the data, "amount." Hence,  
+# Like so: filter - mutate - group_by - summarise - arrange. Our question asks for one column from the data, "amount." 
+# We know we are mutating, because we need different categories of the amount, hence new columns/rows. $1000, dn 
 
 wv_ppp_loan_amount_categories <- west_virginia_ppp %>%
   select(amount) %>%
