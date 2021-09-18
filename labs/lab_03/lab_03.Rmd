@@ -1,0 +1,147 @@
+---
+title: "lab_03"
+author: "sean mussenden"
+date: "8/19/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load libraries and establish settings
+```{r}
+# Turn off scientific notation
+options(scipen=999)
+
+# Load the tidyverse here
+library(tidyverse)
+# Load janitor here
+install.packages('janitor')
+```
+
+## Load data
+```{r}
+# Write code to load the WV slice of the ppp loan data here and call it wv_ppp_loans.
+# The data is called lab_03.rds, and is in the same folder as lab_03.Rmd (this data notebook)
+wv_ppp_loans <- read_rds("lab_03.rds")
+
+```
+
+## Answer questions
+
+Q1: Which five cities located in Kanawha County, West Virginia got the most loans (in number of loans)? How many did each get? To answer this question, you'll have to clean the very messy "city" field.
+
+Note: To answer this question, please fully clean the city field for Kanawha County cities. Hint: once cleaned, the dataframe that counts the number of loans by city should have 38 distinct cities for Kanawha County.
+
+A1: Charleston (2837), South Charleston (484), Saint Albans (304), Dunbar (166), Nitro (142).
+```{r}
+
+# Write your code in this codeblock.
+wv_ppp_loans %>% 
+  filter(project_county_name == 'KANAWHA') %>% 
+  mutate(city = str_to_title(city)) %>% 
+  mutate(city = case_when(
+    city == "Balle" ~ "Belle", 
+    city == "Charelston" ~ "Charleston",
+    city == "Cross Lanes" ~ "Crosslanes",
+    city == "Elkveiw" ~ "Elkview",
+    city == "S Charleston" ~ "South Charleston",
+    str_detect(city,"^So Char") ~ "South Charleston",
+    city == "St Albans" ~ "Saint Albans",
+    str_detect(city,"^St") ~ "Saint Albans",
+    TRUE ~ city
+  )) %>%
+  group_by(city) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total))
+  
+
+
+
+
+```
+
+Q2: What is the name of the business that got the largest loan (by dollar value) in the 5-digit ZIP code in West Virginia that had the highest dollar amount in total loans (by dollar value)? Write up a short paragraph that also answers these questions:
+
+* Where in West Virginia is this ZIP code located?
+* How much was the business' loan for?
+* How much of that loan was forgiven?
+* Which number is bigger, the loan amount or the forgiveness amount? Can you explain the discrepancy?
+
+A2: The 5-digit ZIP code that got the largest amount of total loans by dollar value was 25301. They had a total of 160,741,782.88 dollars. The business that got the largest loan in that ZIP code - 25301 - was The Eye and Ear Clinic  of Charleston DBA Charleston Surgical Hospital. Their total loan amount was 1,520,007 dollars. The clinic is located at 1306 Kanawha Blvd, in	Charleston, KANAWHA county. The forgiveness amount comes up as NA, according to the data. Since NA comes up, that means their loan amount is higher than their forgiveness amount (it doesn't exist). The reason for the discrepancy could be that the company never filed for a forgiveness loan application. 
+
+```{r}
+# Hint
+# First, create a dataframe that shows the top 5-digit ZIP code by total dollar amount
+# Second, use the top ZIP code to create a separate dataframe that shows the business with the biggest loan in that ZIP code.
+
+wv_ppp_loans %>% 
+  group_by(zip) %>% 
+  mutate(zip = str_sub(zip, start=1L, end=5L)) %>% 
+  summarise(total = sum(amount)) %>% 
+  arrange(desc(total))
+  
+wv_ppp_loans %>%
+  select(name, amount, zip, address, city, project_county_name, forgiveness_amount) %>% 
+  filter(zip == '25301') %>%
+  arrange(desc(amount))
+```
+
+Q3: Five business entities owned by the spouse of a member of West Virginia's U.S. House delegation got PPP loans. Write up a paragraph that answers the following questions.   
+
+  * What are the businesses' names?
+  * What do the businesses do?
+  * How much money did the five businesses receive in total?
+  * What percentage of the total loan amount have been forgiven?
+  * How did the U.S. House member vote on the legislation initially authorizing the PPP loan program.
+
+Feel free to add any interesting "color" (little interesting details) you find in your research.  
+
+Some hints to help you answer this question:
+
+* West Virginia's three U.S. House members are listed [here](https://www.govtrack.us/congress/members/WV#representatives)
+* To find businesses they or their families own, you can search for financial disclosure forms for U.S. House members [here](https://disclosures-clerk.house.gov/PublicDisclosure/FinancialDisclosure#Search).
+  * To speed things up, here are direct links to the three U.S. House members most recent financial disclosures, which I found by searching the site linked above. 
+  * [Rep. 1](https://disclosures-clerk.house.gov/public_disc/financial-pdfs/2020/10042042.pdf)
+  * [Rep. 2](https://disclosures-clerk.house.gov/public_disc/financial-pdfs/2020/10040330.pdf)
+  * [Rep. 3](https://disclosures-clerk.house.gov/public_disc/financial-pdfs/2020/10042734.pdf)
+* When you examine the disclosure forms, there may be lots of stock sales and retirement accounts mixed in.  Ignore those. In the table in the disclosure forms, look for "Partnership" or "C-Corp" in the column named "Income Type"
+* This is a link to details on passage of the [CARES ACT](https://www.congress.gov/bill/116th-congress/house-bill/748). You can find a link to how the House voted by clicking on a link from [this page](https://www.congress.gov/bill/116th-congress/house-bill/748/actions).
+
+A3: The West Virginia member whose spouse owns five businesses that got PPP loans is Carol D. Miller. Her spouse, Matt F. Miller, owns five businesses: DM Motor, Dutch Miller of Charleston, Dutch Miller of Charlotte, Dutch Miller Subaru and Dutch Miller Chevrolet. Each business has its own Facebook page, and each one explains that the Dutch Miller chain began in 1961 from Matt Miller's father, H.D. (Dutch) Miller. That was passed on to Matt, and now his sons, Chris and Sam (also Carol Miller's sons) are president or vice/president of the businesses (e.g: DM Motors: https://opencorporates.com/companies/us_wv/176201). Back in 2018, they bought Royal Subaru car dealership that was filing bankruptcy: (https://www.wvgazettemail.com/business/royal-subaru-files-for-bankruptcy-dutch-miller-likely-buyer/article_771e5b13-254a-5019-ad81-0257bbaf2c6d.html) Here's an article that interviews Chris Miller, son of Matt and Carol Miller. The other business owner in the article mentions recieving a PPP loan, Chris Miller doesn't: (https://www.herald-dispatch.com/business/west-virginia-auto-dealers-adapt-to-coronavirus-pandemic/article_1d24dbbd-772f-53b7-b930-9e5399e7c0f1.html) 
+
+I also noticed that there's a real estate business under Carol Miller, called MFM Realty, but the website says it is operated by Susan Miller. Her facebook profile doesn't show any affiliation to Carol Miller, but I would suspect that she is Matt F. Miller's relative. Seems like Carol D. Miller was trying to get everyone a PPP loan in her family. 
+
+The businesses are all car dealerships. They're all in a "Dutch Miller" chain. In total, the businesses received 3,105,300. The total amount of loans forgiven was 3,140,471, which is more than the actual amount of loans they received. Thus, the percentage of the loans forgiven was 101.1326%. She voted "YEA" for the H.R.748 - CARES Act. 
+
+
+
+```{r}
+
+# Hint
+# First, create a dataframe that only has loans to those five companies
+# Second, use that newly created dataframe to calculate total loan amount and percentage forgiven for those companies
+
+wv_ppp_loans %>%
+  select(name, amount, address, city, business_type, forgiveness_amount) %>% 
+  filter(
+    name == "DM MOTOR, INC"|
+      name == "DUTCH MILLER OF CHARLESTON, INC"|
+      name == "DUTCH MILLER OF CHARLOTTE, INC"|
+      name == "DUTCH MILLER SUBARU, INC"|
+      name == "DUTCH MILLER CHEVROLET, INC.")
+
+wv_ppp_loans %>%
+  select(name, amount, address, city, business_type, forgiveness_amount) %>% 
+  filter(
+    name == "DM MOTOR, INC"|
+      name == "DUTCH MILLER OF CHARLESTON, INC"|
+      name == "DUTCH MILLER OF CHARLOTTE, INC"|
+      name == "DUTCH MILLER SUBARU, INC"|
+      name == "DUTCH MILLER CHEVROLET, INC.") %>%
+  summarise(total_amount = sum(amount),
+            total_forgiveness = sum(forgiveness_amount)) %>% 
+  mutate((total_forgiveness/total_amount)*100) 
+
+```
