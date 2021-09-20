@@ -69,7 +69,7 @@ Q2: What is the name of the business that got the largest loan (by dollar value)
 * How much of that loan was forgiven?
 * Which number is bigger, the loan amount or the forgiveness amount? Can you explain the discrepancy?
 
-A2: The 5-digit ZIP code that got the largest amount of total loans by dollar value was 25301. They had a total of 160,741,782.88 dollars. The business that got the largest loan in that ZIP code - 25301 - was The Eye and Ear Clinic  of Charleston DBA Charleston Surgical Hospital. Their total loan amount was 1,520,007 dollars. The clinic is located at 1306 Kanawha Blvd, in	Charleston, KANAWHA county. The forgiveness amount comes up as NA, according to the data. Since NA comes up, that means their loan amount is higher than their forgiveness amount (it doesn't exist). The reason for the discrepancy could be that the company never filed for a forgiveness loan application. 
+A2: The 5-digit ZIP code that got the largest amount of total loans by dollar value was 25301. They had a total of 160,741,782.88 dollars. The business that got the largest loan in that ZIP code - 25301 - was Jackson Kelly PLLC. Their total loan amount was 5,068,472.00 dollars. The clinic is located at 500 Lee Street Suite 1600 in	Charleston, KANAWHA county. The forgiveness amount comes up as 5,126,618.64, according to the data. This means that the business has accrued interest from the loan.
 
 ```{r}
 # Hint
@@ -83,6 +83,7 @@ wv_ppp_loans %>%
   arrange(desc(total))
   
 wv_ppp_loans %>%
+  mutate(zip = str_sub(zip, start=1L, end=5L)) %>% 
   select(name, amount, zip, address, city, project_county_name, forgiveness_amount) %>% 
   filter(zip == '25301') %>%
   arrange(desc(amount))
