@@ -148,7 +148,7 @@ maryland_ppp_with_naics_and_demographics %>%
 
 ### Task 14: Asking Demographic Questions
 **Task** Find the number of PPP loans that went to ZCTAs with more than 50% non-Hispanic white population, and calculate the average and median amounts for those loans. Put your answers below.
-**Answer** The number of PPP loans that went to ZCTAs with more than 50% non-Hispanic white population was 113937. The average of those loans were 88140.24 and the median was 20833.
+**Answer** The number of PPP loans that went to ZCTAs with more than 50% non-Hispanic white population was 113937. The average of those loans was 88140.24 and the median was 20833.
 
 ```{r}
 # zcta with > 50% non-Hispanic white population
@@ -162,7 +162,7 @@ maryland_ppp_with_naics_and_demographics %>%
 
 ### Task 15: Asking Demographic Questions
 **Task** Find the number of PPP loans that went to ZCTAs with more than 50% non-Hispanic Black population, grouped by rural or urban status, and calculate the average and median amounts for those loans. Put your answers below.
-**Answer** The number of PPP loans that went to ZCTAs with more than 50% non-Hispanic Black population, grouped by rural status was 148. The average amount was 44328.87, and the median was 19621. For or urban status was
+**Answer** The number of PPP loans that went to ZCTAs with more than 50% non-Hispanic Black population, grouped by rural status was 148. The average amount was 44328.87, and the median was 19621. For urban status, the amount was 43884. The average amount was 53868.53, and the median was 20000. 
 
 ```{r}
 # zcta with > 50% non-Hispanic Black population grouped by rural/urban
@@ -177,7 +177,7 @@ maryland_ppp_with_naics_and_demographics %>%
 
 ### Task 16: Asking Demographic Questions
 **Task** Find the number of PPP loans that went to ZCTAs with more than 50% non-Hispanic white population, grouped by rural or urban status, and calculate the average and median amounts for those loans. Put your answers below.
-**Answer**
+**Answer** The number of PPP loans that went to ZCTA with more than 50% non-Hispanic white, population, grouped by rural is 18337. The average amount was 73694.14 and the median was 20833. For urban status, the number is 95600, the average amount is 90911.14 and the median was 20833. 
 
 ```{r}
 # zcta with > 50% non-Hispanic white population grouped by rural/urban
