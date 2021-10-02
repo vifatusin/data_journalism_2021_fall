@@ -26,6 +26,7 @@ Loading required libraries for this analysis.
 
 ```{r echo=FALSE, message=FALSE}
 
+
 ```
 
 ## Load and Cleaning Data
@@ -34,11 +35,11 @@ In this section, describe the source of the data, write a basic data dictionary 
 
 ```{r}
 # Load required data
+allegations_nypd <- read_csv("data/allegations_202007271729.csv")
 
 # Path to data should be loaded from folder "data" i.e. read_csv("data/name_of_data.csv")
 
 # Clean required data and prepare for analysis if needed. 
-
 
 ```
 
@@ -47,11 +48,24 @@ In this notebook, we are reverse engineering five sentences from the story.
 
 ### Sentence 1
 
-* **Sentence text**: [Paste in sentence to engineer here]
+* **Sentence text**: "Of at least 77 allegations made against him in 26 separate CCRB complaints, 29 were unsubstantiated; five were “unfounded,” meaning investigators concluded the incident never took place; and 27 were “exonerated,” meaning the conduct fell within patrol guidelines."
+
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+
+
 
 ```{r}
 # Put code to reverse engineer sentence here
+mccormack_jackass <- allegations_nypd %>% 
+  filter(first_name == "Christophe", last_name == "Mccormack")
+
+mccormack_jackass %>% 
+  group_by(complaint_id) %>% 
+  summarise(count = n()) %>% 
+  arrange(desc(count))
+
+mccormack_jackass %>% 
+  filter(board_disposition == "Unsubstantiated"|board_disposition == "Exonerated")
 
 # Display results of code below this codeblock
 
@@ -59,7 +73,8 @@ In this notebook, we are reverse engineering five sentences from the story.
 
 ### Sentence 2
 
-* **Sentence text**: [Paste in sentence to engineer here]
+* **Sentence text**: "In all, the CCRB substantiated 16 allegations lodged in six complaints, most involving the stops and searches of young men of color. No other high-ranking NYPD officer has amassed as many substantiated CCRB complaints."
+
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
 
 ```{r}
@@ -71,7 +86,8 @@ In this notebook, we are reverse engineering five sentences from the story.
 
 ### Sentence 3
 
-* **Sentence text**: [Paste in sentence to engineer here]
+* **Sentence text**: “But many of the officers also said that it’s possible to be an effective cop without so many complaints. An overwhelming majority of the city’s 36,000 officers do not have a single substantiated complaint on their records; only 1 in 9 does.”
+
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
 
 ```{r}
@@ -83,7 +99,8 @@ In this notebook, we are reverse engineering five sentences from the story.
 
 ### Sentence 4
 
-* **Sentence text**: [Paste in sentence to engineer here]
+* **Sentence text**: "Eighty-six of the roughly 420 officers in the department who currently hold a rank above captain — running precincts and other large commands and overseeing hundreds of officers — have tallied at least one misconduct allegation that was substantiated by the CCRB, meaning that investigators amassed enough evidence of offenses, ranging from bad language to pistol whippings, to say that they happened and broke patrol guidelines. The most common involved improper property entries and searches."
+
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
 
 ```{r}
@@ -95,7 +112,8 @@ In this notebook, we are reverse engineering five sentences from the story.
 
 ### Sentence 5
 
-* **Sentence text**: [Paste in sentence to engineer here]
+* **Sentence text**: “McCormack has been accused of misconduct in at least 16 lawsuits, 11 of which settled for a combined $415,000. The allegations ranged from racial discrimination to strip-searches to false arrests.”
+
 * **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
 
 ```{r}
