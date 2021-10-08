@@ -25,7 +25,7 @@ In this notebook, we are reverse engineering the story, [STORY NAME](STORY URL)
 Loading required libraries for this analysis.
 
 ```{r echo=FALSE, message=FALSE}
-
+library(tidyverse)
 
 ```
 
@@ -50,9 +50,9 @@ In this notebook, we are reverse engineering five sentences from the story.
 
 * **Sentence text**: "Of at least 77 allegations made against him in 26 separate CCRB complaints, 29 were unsubstantiated; five were “unfounded,” meaning investigators concluded the incident never took place; and 27 were “exonerated,” meaning the conduct fell within patrol guidelines."
 
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Analysis summary**: We first extracted Christopher Mccormack's information from the allegations_nypd dataframe by filtering his first and last name. Then we grouped by the CCRB complaint, which is the complaint_id column, and summarized the amount of allegations in each complaint. We found 72 allegations in 26 separate CCRB complaints. In order to find the amount of allegations that were unsubstantiated and exonerated, we filtered "Unsubstantiated" and "Exonerated" from the board_disposition column. We then grouped by the board_disposition and summarized the count of each, which showed us 27 exonerated allegations and 29 unsubstantiated allegations. 
 
-
+As for the five allegations that were "unfounded," ProPublica explained that data excludes those five allegations. "We have published, and are releasing for download here, a version of the data that excludes any allegations that investigators concluded did not occur and were deemed unfounded." 
 
 ```{r}
 # Put code to reverse engineer sentence here
@@ -65,7 +65,9 @@ mccormack_jackass %>%
   arrange(desc(count))
 
 mccormack_jackass %>% 
-  filter(board_disposition == "Unsubstantiated"|board_disposition == "Exonerated")
+  filter(board_disposition == "Unsubstantiated"|board_disposition == "Exonerated") %>% 
+  group_by(board_disposition) %>% 
+  summarise(count = n())
 
 # Display results of code below this codeblock
 
