@@ -75,12 +75,24 @@ mccormack_jackass %>%
 
 ### Sentence 2
 
-* **Sentence text**: "In all, the CCRB substantiated 16 allegations lodged in six complaints, most involving the stops and searches of young men of color. No other high-ranking NYPD officer has amassed as many substantiated CCRB complaints."
+* **Sentence text**: "In all, the CCRB substantiated 16 allegations lodged in six complaints, most involving the stops and searches of young men of color." 
 
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Analysis summary**: We filtered the allegations against MacCormack to isolate the substantiated allegations. This gave us a dataframe with 16 allegations. We grouped the allegations by Complaint ID and found six complaints.
+
+We then filtered the substantiated allegations for "frisk" or "search" and found seven of the 16 were frisks or searches of black or Hispanic men, all but one in their 20s.
 
 ```{r}
 # Put code to reverse engineer sentence here
+mccormack_substantiated <- mccormack_jackass %>% 
+  filter(str_detect(board_disposition, "^Substantiated"))
+
+mccormack_substantiated %>% 
+  group_by(complaint_id) %>% 
+  summarise(total = n())
+
+mccormack_substantiated %>% 
+  filter(str_detect(allegation, "(Frisk|search)"))
+
 
 # Display results of code below this codeblock
 
@@ -88,12 +100,22 @@ mccormack_jackass %>%
 
 ### Sentence 3
 
-* **Sentence text**: “But many of the officers also said that it’s possible to be an effective cop without so many complaints. An overwhelming majority of the city’s 36,000 officers do not have a single substantiated complaint on their records; only 1 in 9 does.”
+* **Sentence text**: “But many of the officers also said that it’s possible to be an effective cop without so many complaints. An overwhelming majority of the city’s 36,000 officers do not have a single substantiated complaint on their records; only 1 in 9 does.” 
 
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Analysis summary**: We filtered the data source for "substantiated" allegations and then grouped by "Unique ID" to get a count of officers with substantiated claims. We found 3,996 officers with substantiated claims, which is roughly 1 in 9 of 36,000 New York City police officers.
+
+We could not verify the total count of 36,000 police officers from the database but double checked the figure with the NYPD website at [https://www1.nyc.gov/site/nypd/about/about-nypd/about-nypd-landing.page].
 
 ```{r}
 # Put code to reverse engineer sentence here
+all_cops <- allegations_nypd %>% 
+  group_by(unique_mos_id) %>% 
+  summarise(total = n())
+
+substantiated_cops <- allegations_nypd %>% 
+  filter(str_detect(board_disposition, "^Substantiated")) %>% 
+  group_by(unique_mos_id) %>% 
+  summarise(total = n())
 
 # Display results of code below this codeblock
 
@@ -107,6 +129,28 @@ mccormack_jackass %>%
 
 ```{r}
 # Put code to reverse engineer sentence here
+substantiated_allegations <- allegations_nypd %>% 
+  filter(str_detect(board_disposition, "^Substantiated")) %>% 
+  filter(rank_abbrev_now != "POM") %>% 
+  filter(rank_abbrev_now != "POF") %>% 
+  filter(rank_abbrev_now != "PO") %>% 
+  filter(rank_abbrev_now != "SGT") %>% 
+  filter(rank_abbrev_now != "SSA") %>% 
+  filter(rank_abbrev_now != "SDS") %>% 
+  filter(rank_abbrev_now != "LT") %>% 
+  filter(rank_abbrev_now != "DT1") %>% 
+  filter(rank_abbrev_now != "DT2") %>% 
+  filter(rank_abbrev_now != "DT3") %>% 
+  filter(rank_abbrev_now != "DTS") %>% 
+  filter(rank_abbrev_now != "CPT") %>% 
+  filter(rank_abbrev_now != "LCD") %>% 
+  filter(rank_abbrev_now != "LSA")
+
+substantiated_allegations %>% 
+  group_by(unique_mos_id) %>% 
+  summarise(total = n())
+  
+  
 
 # Display results of code below this codeblock
 
