@@ -123,9 +123,12 @@ substantiated_cops <- allegations_nypd %>%
 
 ### Sentence 4
 
-* **Sentence text**: "Eighty-six of the roughly 420 officers in the department who currently hold a rank above captain — running precincts and other large commands and overseeing hundreds of officers — have tallied at least one misconduct allegation that was substantiated by the CCRB, meaning that investigators amassed enough evidence of offenses, ranging from bad language to pistol whippings, to say that they happened and broke patrol guidelines. The most common involved improper property entries and searches."
+* **Sentence text**: "Eighty-six of the roughly 420 officers in the department who currently hold a rank above captain — running precincts and other large commands and overseeing hundreds of officers — have tallied at least one misconduct allegation that was substantiated by the CCRB, meaning that investigators amassed enough evidence of offenses, ranging from bad language to pistol whippings, to say that they happened and broke patrol guidelines."
 
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Analysis summary**: 
+We could not reproduce the figure that 86 of roughly 420 officers who hold a rank above captain had at least one substantiated misconduct allegation. After asking about the figure, we were told that the data used by ProPublica included cases that were closed pending litigation or taken over by internal disciplinary processes. These were not included in the publicly released data.
+
+As a result, in the publicly released data set, we were able to identify 81 of the 86 officers with a rank above captain with at least one substantiated misconduct allegation.
 
 ```{r}
 # Put code to reverse engineer sentence here
@@ -158,12 +161,18 @@ substantiated_allegations %>%
 
 ### Sentence 5
 
-* **Sentence text**: “McCormack has been accused of misconduct in at least 16 lawsuits, 11 of which settled for a combined $415,000. The allegations ranged from racial discrimination to strip-searches to false arrests.”
+* **Sentence text**: "The most common involved improper property entries and searches."
 
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Analysis summary**: This is a sentence refers to "86" (81 in our findings) officers who hold a rank above captain. We used the substantiated_allegations dataframe and grouped by the allegations. We summarised the amount of allegations and arranged it in descending order. We found that the allegation, "premises entered and/or searched" had the most amount which was 18.  
 
 ```{r}
 # Put code to reverse engineer sentence here
+
+substantiated_allegations %>% 
+  group_by(allegation) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total))
+  
 
 # Display results of code below this codeblock
 
