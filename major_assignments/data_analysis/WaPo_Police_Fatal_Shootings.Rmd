@@ -1,0 +1,64 @@
+---
+title: "WaPo Police Fatal Shootings"
+output: html_notebook
+---
+
+```{r}
+wapo_police_shootings <- read_csv("fatal-police-shootings-data.csv")
+```
+
+Question: Show the basic exploratory analysis to demonstrate an understanding of the dataset. 
+
+Answer: There are various columns that give background on each fatal shooting. One of those columns include the date of the shooting. We noticed that the most recent dates have less information like their race, age, name and the fact that the body cameras weren't on at the time of the shooting. Under the "flee" column, information about that is unavailable/come up as NA for some recent shootings. 
+
+There's a "signs_of_mental_illness" column, which also shows, through true or false, whether the victim displayed potential mental health illnesses before their death. There's also a longtitude column and a latitude column, which gives the precise location of where the victims were shot. 
+
+A few questions we have is what NA means, especially for columns like "flee" and "armed" where they have entries like "not fleeing" and "unarmed."
+
+We also did some coding, with a few of the columns and here were some results from our coding:
+
+```{r}
+wapo_police_shootings %>% 
+  group_by(flee) %>% 
+  summarise(total = n()) #Majority of the victims were not fleeing.
+
+  sum(is.na(wapo_police_shootings$name)) #269 NA names. 
+  
+wapo_police_shootings %>% 
+  group_by(age) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total))  #NA under age comes up the most, 31 was after. 
+  #arrange(desc(age))
+
+wapo_police_shootings %>% 
+  group_by(state) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total)) #California has the most shootings.
+
+wapo_police_shootings %>% 
+  group_by(city) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total)) #Los Angeles has the most shootings.
+
+wapo_police_shootings %>% 
+  group_by(armed) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total)) #Majority of the victims were armed with a gun.
+
+wapo_police_shootings %>% 
+  group_by(body_camera) %>% 
+  summarise(total = n()) #7.2% of officers had their body camera on at the time of the shooting.
+
+wapo_police_shootings %>% 
+  group_by(threat_level) %>% 
+  summarise(total = n()) #Majority of the victims had a threat level of "attack."
+
+wapo_police_shootings %>% 
+  group_by(gender) %>% 
+  summarise(total = n()) #95% of victims were males. 
+
+wapo_police_shootings %>% 
+  group_by(race) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total)) #Majority of victims were white, followed by Black, followed by Hispanic. Also, no way to indicate more than one race. 
+```
