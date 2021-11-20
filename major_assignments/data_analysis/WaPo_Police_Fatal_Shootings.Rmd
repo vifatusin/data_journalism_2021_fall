@@ -3,8 +3,22 @@ title: "WaPo Police Fatal Shootings"
 output: html_notebook
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen=999)
+```
+
 ```{r}
-wapo_police_shootings <- read_csv("fatal-police-shootings-data.csv")
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(ggthemes)
+library(RColorBrewer)
+library(lattice)
+library(tidycensus)
+
+wapo_police_shootings <- read_csv("data-police-shootings-master/fatal-police-shootings-data.csv")
 ```
 
 Question: Show the basic exploratory analysis to demonstrate an understanding of the dataset. 
@@ -61,4 +75,213 @@ wapo_police_shootings %>%
   group_by(race) %>% 
   summarise(total = n()) %>% 
   arrange(desc(total)) #Majority of victims were white, followed by Black, followed by Hispanic. Also, no way to indicate more than one race. 
+```
+Question: Where or when do police shootings happen when the victim is fleeing by foot vs car? How often is the victim not fleeing? How often is the victim fleeing by foot or car? 
+
+Answer: We found that out of 6,718 fatal shootings, 4,002 victims are not fleeing at all when shot. Other victims have fled by car (1088), foot (861), or something else/other (250). There was also an NA field (517), but we decided not to look into this nor the flees that considered as "other." 
+
+We found that 141 victims are fatally shot when they flee by foot in California, the state with the highest amount of flees by foot. The highest city in the U.S. is Los Angeles with 30 victims. California also has the highest amount of flees by car. However, the highest city in the U.S. is Houstin with 15 victims. 
+
+For victims that don't flee: California still has the highest amount of victims that do not flee at all (889). Phoenix, Arizona has the highest amount of victims that do no flee (58).  
+
+```{r}
+# Looking for the types of "flee" from the column
+wapo_police_shootings %>% 
+  group_by(flee) %>% 
+  summarise(total = n())
+#Victims are either fleeing by car(1088), foot(861), something else(250), or not at all(4002, the most). NA also came up (517), but we won't be using that. We also won't be using something else/other. 
+
+# For now, we will stick to car and foot. Now we're filtering out that those two types. 
+flee_shootings <- wapo_police_shootings %>% 
+  filter(flee %in% c("Car", "Foot", "Not fleeing"))
+
+# Starting with foot...
+foot_flee_shootings <- flee_shootings %>% 
+  filter(flee == "Foot")
+
+foot_flee_shootings %>% 
+  group_by(state) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total))
+#The state with the most flees by foot is California with a total of 141. 
+
+foot_flee_shootings %>% 
+  group_by(city) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total))
+#The city with the most flees by foot is Los Angeles, with a total of 30. 
+
+# Now car...
+car_flee_shootings <- flee_shootings %>% 
+  filter(flee == "Car")
+
+car_flee_shootings %>% 
+  group_by(state) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total))
+#California again with 155. 
+
+car_flee_shootings %>% 
+  group_by(city) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total))
+#Houston with 15.
+
+# Now victims who don't flee
+non_flee_shootings <- flee_shootings %>%  
+  filter(flee == "Not fleeing")
+
+non_flee_shootings %>%   
+  group_by(state) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total))
+#California with 889.
+
+non_flee_shootings %>% 
+  group_by(city) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total))
+#Phoenix with 58. 
+
+```
+
+Question: What is the average age range of victims? There seems to be a lot of older victims in this database (65 and up). Why? 
+Answer: In this data, there is a trend of victims being around the ages of 20-35 years old. After filtering through the data specifically about 20-35 year olds, it showed that the top state with the most police shooting victims (aged 20-35) are California. The city of Los Angeles has the most victims aged 20-35 with a count of 62 shootings. According to this LA Times article (https://www.google.com/amp/s/www.latimes.com/california/story/2021-10-15/string-of-recent-lapd-shootings-pushes-2021-count-beyond-2020-2019-totals%3f_amp=true), homicide ratings have increased up to 46% since 2019. 
+
+For all the victims around the ages of 20-35, almost 2000 victims were recorded as 'not fleeing' while on the scene, where as 1628 were said to have fleed the scene. 
+
+```{r}
+age_victim <- wapo_police_shootings %>%
+  group_by(age) %>%
+  summarise(
+    count = n()
+  ) %>%
+  arrange(desc(count))
+age_victim
+
+
+age_victims_fleeing <- wapo_police_shootings %>%
+  group_by(flee == "Not fleeing") %>%
+  filter(age > 20, age < 40) %>%
+  summarise(
+    count = n()
+  )
+
+
+age_victims_state <- wapo_police_shootings %>%
+  group_by(state) %>%
+  filter(age > 20, age < 40) %>%
+  summarise(
+    count = n()
+  ) %>%
+  arrange(desc(count))
+  
+
+age_victims_cali <- wapo_police_shootings %>%
+  group_by(city) %>%
+  filter(age > 20, age < 40) %>%
+  summarise(
+    count = n()
+  ) %>%
+  arrange(desc(count))
+  
+
+age_victims_fleeing <- wapo_police_shootings %>%
+  group_by(flee == "Not fleeing") %>%
+  filter(age > 20, age < 40) %>%
+  summarise(
+    count = n()
+  )
+```
+
+Question: Do shootings happen more often in states that allow concealed carry? Or other less restrictive gun laws?
+Answer: This analysis separated the states into two groups -- one group allows unrestricted, aka "constitutional," concealed carry laws; one that has concealed carry restrictions of any kind. States with unrestricted concealed carry have a higher rate of shootings -- 2.9 per 100,000 people -- than states with any kind of restriction on concealed carry -- 2.0 per 100,000 people. 
+
+However, it's also interesting that the two states with the highest rate of police shootings per 100,000 people don't belong to the same group. Alaska, with 6.4 shootings per 100,000 people is an unrestricted open carry state. New Mexico, also with 6.4 shootings per 100,000 people, is not an unrestricted concealed carry state.
+
+```{r}
+# https://en.wikipedia.org/wiki/Concealed_carry_in_the_United_States
+
+unrestricted_concealed_carry <- wapo_police_shootings %>%
+  filter(state %in% c("AK", "AZ", "AR", "ID", "IA", "KS", "KY", "ME", "MS", "MT", "NH", "ND", "OK", "SD", "TN", "TX", "UT", "VT", "WV","WY")) %>%
+  group_by(state) %>%
+  summarise(shootings = n())
+
+unrestricted_concealed_carry
+
+```
+
+This is the inverse - states with any kind of restriction on concealed carry. 
+
+```{r}
+
+# https://en.wikipedia.org/wiki/Concealed_carry_in_the_United_States
+
+anyrestricted_concealed_carry <- wapo_police_shootings %>%
+  filter(!state %in% c("AK", "AZ", "AR", "ID", "IA", "KS", "KY", "ME", "MS", "MT", "NH", "ND", "OK", "SD", "TN", "TX", "UT", "VT", "WV","WY")) %>%
+  group_by(state) %>%
+  summarise(shootings = n())
+
+anyrestricted_concealed_carry
+
+```
+```{r}
+vars <- load_variables(year = 2019,
+                       dataset = "acs1",
+                       cache = TRUE)
+```
+
+```{r}
+state_pops <- get_acs(geography = "state",
+                      variables = "B01001_001")
+
+state_pops <- state_pops %>%
+  select(-variable, -moe)
+
+state_pops
+
+state_abbreviations <- read_csv("data-police-shootings-master/name-abbr.csv")
+state_abbreviations
+```
+
+```{r}
+
+state_pop_abbrev <- state_pops %>%
+  inner_join(state_abbreviations, by = c("NAME" = "state"))
+
+state_pop_shootings_unrestricted <- state_pop_abbrev %>%
+  left_join(unrestricted_concealed_carry, by = c("abbreviation" = "state"))
+
+state_pop_shootings_unrestricted <- state_pop_shootings_unrestricted %>%
+  filter(shootings > 0) %>%
+  mutate(shootings_percapita = shootings/estimate) %>%
+  mutate(shootings_per100k = shootings_percapita * 100000) %>%
+  arrange(desc(shootings_per100k))
+
+state_pop_shootings_unrestricted 
+
+mean(state_pop_shootings_unrestricted$shootings_per100k)
+
+```
+
+```{r}
+anyrestricted_concealed_carry
+
+state_pop_shootings_anyrestrict <- state_pop_abbrev %>%
+  left_join(anyrestricted_concealed_carry, by = c("abbreviation" = "state"))
+
+state_pop_shootings_anyrestrict <- state_pop_shootings_anyrestrict %>%
+  filter(shootings > 0) %>%
+  mutate(shootings_percapita = shootings/estimate) %>%
+  mutate(shootings_per100k = shootings_percapita * 100000) %>%
+  arrange(desc(shootings_per100k))
+
+state_pop_shootings_anyrestrict
+
+mean(state_pop_shootings_anyrestrict$shootings_per100k)
+
+```
+
+
+
 ```
