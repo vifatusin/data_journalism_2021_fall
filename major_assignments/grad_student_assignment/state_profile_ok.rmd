@@ -1,0 +1,396 @@
+---
+title: "state_profile"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## PPP State Profile
+
+Your assignment is to explore a dataset of PPP loan applications for a particular state and to answer a series of questions that will help you summarize that state's loan applications. You will need to write R code to answer those questions. You also will bring in other data, including Census information, and you will be making graphics, including maps, to illustrate your findings.
+
+The deliverable will be this R Markdown notebook and a data folder that you will receive with a state's loan application data. Place any other data you are using to answer the questions in the same data folder.
+
+## Load libraries and establish settings
+
+**Task** Create a codeblock and load appropriate packages and settings for this assignment.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen=999)
+```
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(refinr)
+library(rvest)
+library(tidycensus)
+library(ggthemes)
+library(tigris)
+library(sf)
+library(ggrepel)
+library(corrr)
+library(tidytext)
+
+ok_ppp <- read_rds("ok_ppp.rds")
+```
+## Initial Exploration
+
+**Q1.**. Write R code that generates some basic descriptive statistics that allows you to describe the applications from your state. This code should produce results that describe the data in different ways: how many applications there are, along with ways to understand the typical and most frequent values for columns you find interesting or newsworthy. You should produce at least five (5) descriptive statistics and write up a summary of the data using them.
+
+**A1.** Oklahoma state had a total of 156,481 loans. Each row in the dataframe was a loan application, and I was able to get that from using the code "glimpse," without having to scroll all the way to the end. 
+
+Oklahoma county specifically had 32,205 loans applications, the county with the most loans. Cotton  county had 305. Of course, Oklahoma has a larger population (797,434 according to US Census, 2019) in comparison to Cotton (5,666). Oklahoma's loans amounted to $2,361,451,764 and Cotton's loans amounted to $15,949,567. However, Cotton doesn't have the least amount of loans. It's actually Harmon county, with 316 loans amounting to $6,420,231, which also has a population of 2,653. These results are as a result of grouping and summarizing various columns from the main dataset like amount, project_county_name, etc. 
+
+Also, side note, five of the seven companies with the most amount of loans ($10,000,000), have representing agents from registered agent companies. I think that's common, but it's very interesting how all of them have some kind of registered agent company but also a have the exact same loan amount of $10,000,000. 
+
+Finally, there were five counties that had only one loan - Broward, Clackamas, Palm Beach, Sedgwick and Tarrant. They all had businesses in cities that were in Oklahoma, but the counties they put down aren't in Oklahoma. I didn't really know what to do with those, but they are worthy of looking into. It's also something to bring up to SBA. How could they have skimmed over something like that? Unless the person applying did a bad job in filling out the application...?
+   
+```{r}
+# Interesting columns: zip, race, business_type, gender, date_approved (potentially to show which day applications were most accepted), servicing_lender_name, servicing_lender_state (where are those lenders?), project_county_name, forgiveness_amount (which businesses didn't receive forgiveness for their loans?), jobs_retained.
+
+# How many applications are there?
+glimpse(ok_ppp)
+# 156,481 applications. 
+
+# Which county has the most amount of loans? The least? 
+ok_ppp %>% 
+  group_by(project_county_name) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total))
+# Highest was Oklahoma County, with 32,205 loan applications. Lowest was Cotton County with 305. Why? Oklahoma County has a population estimate of 797,434 as of 2019 according to US Census. Cotton County has a population of 5,666.  
+# However, the five under Cotton County - Broward, Clackamas, Palm Beach, Sedgwick, and Tarrant - each had one application but were also counties that don't exist in Oklahoma state. So, we're gonna ignore those.
+
+# Which business got the most loans?
+ok_ppp %>% 
+  select(name, amount, naics_code, business_type, jobs_retained, date_approved, lender, forgiveness_amount, project_county_name, servicing_lender_state) %>%  
+  arrange(desc(amount)) %>% 
+  head(8) %>% 
+  View()
+
+# Ignoring the 8th row, the top seven businesses all have received a total of $10,000,000 in loans: QUALITY INTEGRATED SERVICES INC., LATSHAW DRILLING COMPANY, LLC, HAC, INC, THE BAMA COMPANIES, INC., LSB INDUSTRIES, INC, ZEECO, INC and PARFAB FIELD SERVICES LLC. I wanted to see if there's any sort of correlation between these companies. All of the 7 businesses, excluding Zeeco Inc. and The Bama Companies Inc. have an agent that is through some type of registered agent company. Which is interesting, I think. 
+
+# Quality Integrated Services Inc: https://opencorporates.com/companies/us_ok/1912053578
+# Latshaw Drilling Company, LLC: https://opencorporates.com/companies/us_ok/3712072579
+# HAC, Inc: https://opencorporates.com/companies/us_ok/2300695223
+# LSB Industries Inc: https://opencorporates.com/companies/us_ok/2300307337
+# Parfab Field Services, LLC:  https://opencorporates.com/companies/us_ok/2300307337
+
+# Creating a summarized table of the state's ppp_loans
+ok_summarized <- ok_ppp %>% 
+  group_by(state) %>% 
+  summarise(count_of_loans = n(), total_loan_amount = sum(amount), mean(amount), median(amount), min(amount), max(amount))
+
+# Now, the counties
+ok_county_summary <- ok_ppp %>% 
+  group_by(project_county_name) %>% 
+  summarise(count_of_loans = n(), total_amount_of_loans = sum(amount), average_loan_amount = mean(amount), median(amount), min(amount), max(amount))
+
+```
+
+## Geographic Analysis
+
+**Q2.** Write R code that examines geographic patterns for PPP loans in your state, using Census population information to calculate a per-capita figure for the state and counties and zip codes. Then, make a county map using ggplot showing the per-capita data and a zip code map showing the difference from the statewide per-capita figure. Describe the most interesting or newsworthy findings based on your exploration.
+
+**A2.** The west side of the state had majority of the higher loans per capita. Rogers Mills, specifically, had the highest loans per capita but also a very low population. Oklahoma county had the highest population but yet lower loans per capita. It placed 47th on the list.
+
+```{r}
+# Getting population from ACS, using vars. 
+vars <- load_variables(year = 2019,
+                       dataset = "acs5",
+                       cache = TRUE)
+
+ok_pop <- get_acs(geography = "state",
+                  variables = c(estimate = "B01001_001"),
+                  state = "OK",
+                  year = 2019)
+
+# figuring out the per capita. For the state. We'll go with 100,000.
+ok_pop <- ok_pop %>% 
+  select(-variable, -moe) %>% 
+  rename("population" = "estimate") %>% 
+  mutate(total_ppp_loans = 156481) %>%
+  mutate(loans_percapita = total_ppp_loans/population) %>% 
+  mutate(loans_per100k = loans_percapita * 100000)
+#Oklahoma had 3978.799 loans per 100,000 people.
+
+# figuring out the per capita, per county. 100,000 again. 
+# starting with the information from acs
+ok_county_pop <- get_acs(geography = "county",
+                         variables = c(estimate = "B01001_001"),
+                         state = "OK",
+                         year = 2019)
+
+ok_county_pop <- ok_county_pop %>% 
+  mutate(NAME = gsub(" County, Oklahoma", "", NAME))
+
+ok_county_pop$NAME = toupper(ok_county_pop$NAME)
+
+ok_county_pop <- ok_county_pop %>% 
+  select(-variable, -moe) %>% 
+  rename("population" = "estimate")
+
+# Now from the original dataset.
+ok_county_loans <- ok_ppp %>% 
+  group_by(project_county_name) %>% 
+  summarise(count_of_loans = n()) %>% 
+  rename("NAME" = "project_county_name")
+
+# take out the 5 that aren't in Oklahoma... smh.
+ok_county_loans <- ok_county_loans[!(ok_county_loans$NAME == "BROWARD" | ok_county_loans$NAME == "CLACKAMAS" | ok_county_loans$NAME == "PALM BEACH" | ok_county_loans$NAME == "SEDGWICK" | ok_county_loans$NAME == "TARRANT"),]
+
+# combine
+ok_county_100k <- ok_county_pop %>% 
+  inner_join(ok_county_loans, by=c("NAME")) %>% 
+  mutate(county_loans_percapita = count_of_loans/population) %>% 
+  mutate(loans_per100k = county_loans_percapita *100000) %>% 
+  arrange(desc(loans_per100k))
+# Roger Mills, a county in Oklahoma with a population of 3,667 people had 20207.254 loans per 100k, the most. Oklahoma county, the county with the most loans had 4090.999 loans per 100k It also had the highest population of 787,216 people. It placed 47th on the list The county with the least loans was Cotton county, which has a population of 5,858 people. It had 5206.555 loans per 100k.
+
+#zip codes. Per 1,000 now, since there aren't 100k in a zipcode...
+ok_ppp_w_zips <- ok_ppp %>% 
+  mutate(zip5 = str_sub(zip, 1, 5)) 
+
+top_ok_zips <- ok_ppp_w_zips %>% 
+  group_by(zip5) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total))
+
+top_ok_zips <- top_ok_zips %>% 
+  rename("GEOID" = "zip5")
+
+ok_zips <- get_acs(geography = "zcta",
+                   variables = c(estimate = "B01001_001"),
+                   state = "OK",
+                   year = 2019)
+
+ok_zips_per100k <- ok_zips %>% 
+  left_join(top_ok_zips, by=c("GEOID")) %>% 
+  select(-NAME, -variable, -moe) %>% 
+  rename("population" = "estimate") %>% 
+  rename("total_loans" = "total")
+
+ok_zips_per1k <- ok_zips_per100k %>% 
+  mutate(zip_loans_percapita = total_loans/population) %>%
+  mutate
+  mutate(loans_per1k = zip_loans_percapita * 1000) %>% 
+  arrange(desc(loans_per1k)) %>% 
+  select(-loans_per100k)
+
+ok_zips_per1k <- ok_zips_per1k[!(ok_zips_per1k$GEOID == "73019" | ok_zips_per1k$GEOID == "	
+73425" | ok_zips_per1k$GEOID == "74068" | ok_zips_per1k$GEOID == "74071" | ok_zips_per1k$GEOID == "74360" | ok_zips_per1k$GEOID == "74459" | ok_zips_per1k$GEOID == "74747" | ok_zips_per1k$GEOID == "74753"),]
+
+ok_zips_per1k <- ok_zips_per1k[!(ok_zips_per1k$GEOID == "73425"),]
+# 74117, a zip code in Tulsa with a population of 45 people, had 644... loans per 1,000. That's quite a lot. According to https://www.oklahoma-demographics.com/74117-demographics, it is 100% white. 
+
+# making county map using ggplot showing the per-capita data
+counties <- counties() 
+glimpse(counties)
+
+ok_counties <- counties %>%
+  filter(STATEFP == "40")
+
+ok_counties$NAME = toupper(ok_counties$NAME)
+
+ok_county_100k_geo <- ok_counties %>% 
+  inner_join(ok_county_100k, by=c("NAME"))
+
+ggplot() + 
+  geom_sf(data=ok_county_100k_geo, aes(fill=loans_per100k)) + 
+  theme_minimal() +
+  scale_fill_viridis_b(option="magma",trans = "log")
+
+# The west side of the state seems to have gotten the most amount of loans per 100k.
+
+zctas <- zctas()
+glimpse(zctas)
+
+starts_with = c("75", "76")
+
+ok_zips <- zctas(cb = TRUE, starts_with = c("73", "74", "74966"))
+
+ok_zips_geo <- ok_zips %>% 
+  inner_join(ok_zips_per1k, by=c("GEOID10" = "GEOID"))
+
+ggplot() + 
+  geom_sf(data=ok_zips_geo, aes(fill=loans_per1k)) + 
+  theme_minimal() +
+  scale_fill_viridis_b(option="magma",trans = "log")
+# The loans per capita is evenly distributed, but there's still more loans given to the zip codes on the west side of the state. 
+```
+
+## Lender Analysis
+
+**Q3.** Write R code to examine which lenders had the most approved applications in your state (and include summary statistics such as total amount and average loan amount). Generate dataframes that show the number and total amount of all loans and undisbursed loans per lender. For those lenders who had any undisbursed loans, make a graphic showing the relationship between the total amount of loans and the total undisbursed amount. Describe the most noticeable outlier lenders on that graphic below.
+
+**A3.** Regent Bank specifically had the highest amount of most approved loans but the lowest amount of undisbursed loans, which was interesting. 
+https://datawrapper.dwcdn.net/q64Xl/1/
+```{r}
+amounts_undisbursed <- ok_ppp_w_zips %>% 
+  select(name, amount, lender, undisbursed_amount, zip5, date_approved) %>%
+  arrange(desc(undisbursed_amount))
+
+lenders_undisbursed <- amounts_undisbursed %>% 
+  group_by(lender) %>% 
+  summarise(total_undisbursed_amount = sum(undisbursed_amount), total_amount = sum(amount)) %>%
+  arrange(desc(total_undisbursed_amount)) %>% 
+  head(10)
+
+write_csv(lenders_undisbursed, "lenders_amounts_undisbursed.csv")
+
+```
+
+## Industry Analysis
+
+**Q4.** Write R code that examines industry patterns for PPP loans in your state, using the NAICS codes from the PPP data as a starting point. Generate statewide and county industry totals, then join that with 2018-19 data from the [Census County Business Patterns survey] (https://www2.census.gov/programs-surveys/cbp/datasets/2019/cbp19co.zip) using 6-digit NAICS codes. The documentation explaining that data can be found here: https://www2.census.gov/programs-surveys/cbp/technical-documentation/records-layouts/2018_record_layouts/county-layout-2018.txt. To do this, you will need to add FIPS codes to your PPP dataset.
+
+Does the distribution of PPP applications by the top 10 industries (by number of applications) roughly match the number of businesses reported in the Census data? Does it roughly match if you remove self-employed individuals and sole proprietorships from the PPP totals? Write up a summary of what you've found and whether there are potentially newsworthy patterns in the data.
+
+Create a county-level map showing the differences between the PPP applications and the Census business data for one of the top 10 industry codes. You can do this either using ggplot or Datawrapper (if the latter, publish that map and include the URL below).
+
+**A4.** 
+https://datawrapper.dwcdn.net/EqGLO/1/
+https://datawrapper.dwcdn.net/7NCaJ/1/
+
+This one was a tough one, but in the cbp data, not all of the fips codes are represented. Additionally some of the industries had more businesses in the cbp than in the ppp loan data, and vice versa. I wonder where the other businesses are in cbp data, unless I did my code wrong...
+
+```{r}
+cbp_19_co <- read_csv("cbp19co.csv")
+
+ok_cbp <- cbp_19_co %>% 
+  filter(fipstate == 40)
+
+naics_codes <- read_csv("naics_codes.csv")
+
+ok_ppp_naics <- ok_ppp %>% 
+  inner_join(naics_codes, by="naics_code")%>% 
+  select(name, naics_code, title, project_county_name)
+
+county_fips <- read_csv("county_fips.csv") 
+
+ok_county_fips <- county_fips %>% 
+  filter(state == "OK")
+
+ok_ppp_naics_fips <- ok_ppp_naics %>% 
+  inner_join(ok_county_fips, by=c("project_county_name" = "match_county")) %>% 
+  select(-state, -state_code, -state_name, -county_code, -county)
+
+ok_ppp_naics_fips_state <- ok_ppp_naics_fips %>% 
+  group_by(naics_code) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total)) %>% 
+  head(11)
+
+ok_ppp_naics_fips_county <- ok_ppp_naics_fips %>% 
+  group_by(fips_code) %>% 
+  summarise(total = n()) %>% 
+  arrange(desc(total)) %>% 
+  head(10)
+
+ok_ppp_naics_fips_state <- ok_ppp_naics_fips_state %>% 
+  left_join(naics_codes, by=c("naics_code")) 
+
+ok_ppp_naics_fips_state <- ok_ppp_naics_fips_state[!(ok_ppp_naics_fips_state$naics_code == "112111"),]
+
+naics_812112 <- ok_cbp %>% 
+  filter(naics == "812112") %>% 
+  select(naics, est) %>% 
+  group_by(naics) %>% 
+  summarise(estimate = sum(est))
+
+naics_722511 <- ok_cbp %>% 
+  filter(naics == "722511") %>% 
+  select(naics, est) %>% 
+  group_by(naics) %>% 
+  summarise(estimate = sum(est))
+
+naics_213112 <- ok_cbp %>% 
+  filter(naics == "213112") %>% 
+  select(naics, est) %>% 
+  group_by(naics) %>% 
+  summarise(estimate = sum(est))
+
+naics_541110 <- ok_cbp %>% 
+  filter(naics == "541110") %>% 
+  select(naics, est) %>% 
+  group_by(naics) %>% 
+  summarise(estimate = sum(est))
+
+naics_812113 <- ok_cbp %>% 
+  filter(naics == "812113") %>% 
+  select(naics, est) %>% 
+  group_by(naics) %>% 
+  summarise(estimate = sum(est))
+
+naics_531210 <- ok_cbp %>% 
+  filter(naics == "531210") %>% 
+  select(naics, est) %>% 
+  group_by(naics) %>% 
+  summarise(estimate = sum(est))
+
+naics_524210 <- ok_cbp %>% 
+  filter(naics == "524210") %>% 
+  select(naics, est) %>% 
+  group_by(naics) %>% 
+  summarise(estimate = sum(est))
+
+naics_813110 <- ok_cbp %>% 
+  filter(naics == "813110") %>% 
+  select(naics, est) %>% 
+  group_by(naics) %>% 
+  summarise(estimate = sum(est))
+
+naics_621111 <- ok_cbp %>% 
+  filter(naics == "621111") %>% 
+  select(naics, est) %>% 
+  group_by(naics) %>% 
+  summarise(estimate = sum(est))
+
+naics_812990 <- ok_cbp %>% 
+  filter(naics == "812990") %>% 
+  select(naics, est) %>% 
+  group_by(naics) %>% 
+  summarise(estimate = sum(est))
+
+naics_code <- c(812112, 722511, 213112, 541110, 812113, 531210, 524210, 813110, 621111, 812990)
+estimate <- c(552, 2888, 1346, 2324, 99, 1228, 2210, 3335, 2423, 133)
+
+naics_code_est <- data.frame(naics_code, estimate)
+
+ok_ppp_naics_fips_state <- ok_ppp_naics_fips_state %>%
+  inner_join(naics_code_est, by=c("naics_code"))
+#Kinda like a mixup... some loans are more than the actual estimate of businesses in that naics code for that state and vice versa. Unless my coding is wrong... It may not be helpful to take away the other types of businesses because the loans are lower than the estimate or vice versa. 
+
+#gonna use naics_code 812990. 
+
+ok_ppp_naics_fips_812990 <- ok_ppp_naics_fips %>% 
+  filter(naics_code == "812990") %>% 
+  group_by(fips_code) %>% 
+  summarise(total = n())
+
+ok_cbp_naics_fips_estimates_812990 <- ok_cbp %>% 
+  filter(naics == "812990")
+
+ok_cbp_naics_fips_estimates_812990$fips <- paste0(ok_cbp_naics_fips_estimates_812990$fipstate, ok_cbp_naics_fips_estimates_812990$fipscty)
+
+ok_cbp_naics_fips_estimates_812990 <- ok_cbp_naics_fips_estimates_812990 %>% 
+  select(fips, est)
+
+write_csv(ok_ppp_naics_fips_812990, "ok_ppp_812990.csv")
+
+write_csv(ok_cbp_naics_fips_estimates_812990, "ok_cbp_812990.csv")
+
+
+
+
+```
+
+## Summary
+
+**Q5.** What is the most promising story idea that you have found during this exploration? How would you approach reporting it out and what other information/data would you need to do that? What would be the minimum story you could get from this, and what would be the maximum story?
+
+**A5.** There is a lot of information about other states within Oklahoma's ppp loan data. As seen in number one, some of the information includes counties from other states. Some of the data isn't even represented, for example in the CBP data. It just seems as if a lot is wrong with Oklahoma. I would approach it by potentially bringing it up to the Small Business Administration and showing them what's in the data and what other information I would need. I would probably have to get information on small businesses in Oklahoma, which would take a while. The minimum story from this would probably be the counties that had more loans per capita. The maximum story would be that the Small Business Administration overlooked errors in the data. 
